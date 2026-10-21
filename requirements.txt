@@ -1,0 +1,8 @@
+torch>=2.0
+numpy
+scipy
+matplotlib
+neural_ssm==0.28
+papermill
+nbformat
+ipykernel
