@@ -23,7 +23,7 @@ def _basal_at(basal_time, basal_values, ToD):
     return basal_values[indices[-1]] if len(indices) > 0 else basal_values[-1]
 
 
-def _booster_d(glucose_PID):
+def _booster_d(glucose_PID, disable_booster_d_pos=True):
     """Derivative correction factors of the PID (single-sequence version)."""
     d1 = glucose_PID[-1] - glucose_PID[-2]
     d2 = glucose_PID[-1] - glucose_PID[-3]
@@ -37,6 +37,8 @@ def _booster_d(glucose_PID):
         booster_d_pos = 3
     if d1 > 20 and d2 > 40:
         booster_d_pos = 4
+    if disable_booster_d_pos:
+        booster_d_pos = 1
     return booster_d_neg, booster_d_pos
 
 
@@ -81,9 +83,10 @@ class LoadData(Dataset):
     initialize the controller state in closed-loop rollouts.
 
     Each item is (meal, insulin, CGM, time), all normalized except time.
+    If `disable_booster_d_pos` is True, the PID replay does not amplify the derivative action on rising glucose.
     """
 
-    def __init__(self, patient, data_path, train_size):
+    def __init__(self, patient, data_path, train_size, disable_booster_d_pos=True):
         loaded = sio.loadmat(f"{data_path}/s#adult#{patient:03d}.mat")
         I_sat_real, MH_real = _read_signals(loaded)
         CGM_real = loaded["CGM"]["signals"][0, 0]["values"][0, 0][1::5].flatten()
@@ -114,7 +117,7 @@ class LoadData(Dataset):
 
                 e = PID_REF - glucose_PID[i]
                 e_m1 = PID_REF - glucose_PID[i - 1]
-                booster_d_neg, booster_d_pos = _booster_d(glucose_PID)
+                booster_d_neg, booster_d_pos = _booster_d(glucose_PID, disable_booster_d_pos)
                 basal_PID = K_p * e + K_d * (e - e_m1) * booster_d_pos + K_i * e_sum
                 bolus = basal_PID * PID_CONVERSION_INDEX * booster_d_neg * CR_tuned
 

@@ -48,11 +48,14 @@ class NonLinearController(nn.Module):
 
     Each call performs one control step: it receives the normalized CGM of the current
     sample and returns the normalized insulin delivered by the pump.
+    If `disable_booster_d_pos` is True, the derivative action is not amplified on rising glucose.
     """
 
-    def __init__(self, P, PF, basal_vec, scaler_glucose, scaler_insulin, batch_size=1, device="cpu"):
+    def __init__(self, P, PF, basal_vec, scaler_glucose, scaler_insulin, batch_size=1, device="cpu",
+                 disable_booster_d_pos=True):
         super().__init__()
         self.device = device
+        self.disable_booster_d_pos = disable_booster_d_pos
         self.P = P
         self.PF = PF
         self.scaler_glucose = scaler_glucose
@@ -115,7 +118,7 @@ class NonLinearController(nn.Module):
 
             e = (P.PID_par.ref - self.glucose_PID[:, -1]).unsqueeze(1)
             e_m1 = (P.PID_par.ref - self.glucose_PID[:, -2]).unsqueeze(1)
-            booster_d_neg, booster_d_pos = PF.function_booster_d(self.glucose_PID)
+            booster_d_neg, booster_d_pos = PF.function_booster_d(self.glucose_PID, self.disable_booster_d_pos)
 
             basal_PID = K_p * e + K_d * (e - e_m1) * booster_d_pos + K_i * e_sum
             CR_tuned = P.Patient_par.CR_tuned_101[0] if P.patient == 101 else P.Patient_par.CR_tuned[P.patient - 1]

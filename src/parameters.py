@@ -150,11 +150,12 @@ class PID_functions:
         return bolus.to(torch.float32), basal, saturation_error
 
     @staticmethod
-    def function_booster_d(glucose_PID):
+    def function_booster_d(glucose_PID, disable_booster_d_pos=True):
         """Derivative correction factors of the PID, computed on the last four CGM samples.
 
         Args:
             glucose_PID: (batch, n) with n >= 4
+            disable_booster_d_pos: if True, booster_d_pos is always 1
         Returns:
             booster_d_neg, booster_d_pos: (batch, 1)
         """
@@ -172,6 +173,8 @@ class PID_functions:
         booster_d_pos = torch.where((d1 > 10) & (d2 > 20), torch.tensor(2.5, device=glucose_PID.device), booster_d_pos)
         booster_d_pos = torch.where((d1 > 15) & (d2 > 30), torch.tensor(3.0, device=glucose_PID.device), booster_d_pos)
         booster_d_pos = torch.where((d1 > 20) & (d2 > 40), torch.tensor(4.0, device=glucose_PID.device), booster_d_pos)
+        if disable_booster_d_pos:
+            booster_d_pos = torch.ones_like(d1)
 
         return booster_d_neg.unsqueeze(1), booster_d_pos.unsqueeze(1)
 

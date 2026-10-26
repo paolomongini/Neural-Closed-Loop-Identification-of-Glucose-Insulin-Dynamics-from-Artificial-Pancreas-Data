@@ -41,6 +41,9 @@ CONFIG = {
     "loss_coeff_der": 1e-3,         # second-difference penalty on the two branch outputs
     "loss_coeff_der3": 0.01,        # third-difference penalty on synthetic worst-case impulse responses
 
+    # ----- PID controller -----
+    "disable_booster_d_pos": True,  # if True, the derivative action is not amplified when glucose is rising
+
     "SSM_param": SSM_PARAM,
 }
 
